@@ -1,0 +1,1 @@
+from .personagem import Personagem
