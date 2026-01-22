@@ -1,5 +1,9 @@
 import mysql.connector
 from tkinter import ttk, messagebox
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Remove Caracateres Especias
 def remove_caracter(str):
@@ -11,14 +15,14 @@ def remove_caracter(str):
 def conexao():
     try:
         return mysql.connector.connect(
-            host = "localhost",
-            user = "root",
-            password = "",
-            database = "RPG"
+            host = os.getenv("DB_HOST", "localhost"),
+            user = os.getenv("DB_USER", "root"),
+            password = os.getenv("DB_PASSWORD", ""),
+            database = os.getenv("DB_NAME", "RPG")
         )
     except mysql.connector.Error as err:
         messagebox.showerror("Erro de Conexão", f"Erro: {err}")
-        return None     
+        return None
 
 # Buscas as Raças Cadastradas.
 def lista_racas():
@@ -97,7 +101,7 @@ def lista_Sub_Classe():
     if conn:
         cursor = conn.cursor()
 
-        query = f"SELECT nome_subclasse FROM Sub_Classes WHERE id_classe = 0"
+        query = "SELECT nome_subclasse FROM Sub_Classes WHERE id_classe = 0"
 
         cursor.execute(query)
         Sub_classes = cursor.fetchall()
@@ -119,9 +123,10 @@ def id_classe(classe):
     if conn:
         cursor = conn.cursor()
 
-        query = f"SELECT id_classe FROM Classes WHERE nome_classe = '{classe}'"
+        # FIXED: SQL Injection
+        query = "SELECT id_classe FROM Classes WHERE nome_classe = %s"
 
-        cursor.execute(query)
+        cursor.execute(query, (classe,))
         id_classe = cursor.fetchall()
         id_formatado = str(id_classe).replace('(','').replace(')','').replace("'","").replace(',','').replace("[","").replace("]","")
 
@@ -135,9 +140,10 @@ def id_raca(raca):
     if conn:
         cursor = conn.cursor()
 
-        query = f"SELECT id_raca FROM Racas WHERE nome_raca = '{raca}'"
+        # FIXED: SQL Injection
+        query = "SELECT id_raca FROM Racas WHERE nome_raca = %s"
 
-        cursor.execute(query)
+        cursor.execute(query, (raca,))
         id_classe = cursor.fetchall()
         id_formatado = str(id_classe).replace('(','').replace(')','').replace("'","").replace(',','').replace("[","").replace("]","")
 
