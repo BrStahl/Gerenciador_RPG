@@ -1,5 +1,7 @@
 import mysql.connector
 from tkinter import ttk, messagebox
+import os
+from dotenv import load_dotenv
 
 # Remove Caracateres Especias
 def remove_caracter(str):
@@ -9,16 +11,19 @@ def remove_caracter(str):
 
 # Realiza Conexão com Banco
 def conexao():
+    load_dotenv()
+
+    db_config = {
+        'host': os.getenv('DB_HOST'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'database': os.getenv('DB_NAME')
+    }
     try:
-        return mysql.connector.connect(
-            host = "localhost",
-            user = "root",
-            password = "",
-            database = "RPG"
-        )
+        return mysql.connector.connect(**db_config)
     except mysql.connector.Error as err:
         messagebox.showerror("Erro de Conexão", f"Erro: {err}")
-        return None     
+        return None
 
 # Buscas as Raças Cadastradas.
 def lista_racas():
