@@ -3,8 +3,6 @@ from tkinter import ttk, messagebox
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 # Remove Caracateres Especias
 def remove_caracter(str):
     novo_valor = str.replace('(','').replace(')','').replace("'","").replace(',','')
@@ -13,13 +11,16 @@ def remove_caracter(str):
 
 # Realiza Conexão com Banco
 def conexao():
+    load_dotenv()
+
+    db_config = {
+        'host': os.getenv('DB_HOST'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'database': os.getenv('DB_NAME')
+    }
     try:
-        return mysql.connector.connect(
-            host = os.getenv("DB_HOST", "localhost"),
-            user = os.getenv("DB_USER", "root"),
-            password = os.getenv("DB_PASSWORD", ""),
-            database = os.getenv("DB_NAME", "RPG")
-        )
+        return mysql.connector.connect(**db_config)
     except mysql.connector.Error as err:
         messagebox.showerror("Erro de Conexão", f"Erro: {err}")
         return None
@@ -101,7 +102,7 @@ def lista_Sub_Classe():
     if conn:
         cursor = conn.cursor()
 
-        query = "SELECT nome_subclasse FROM Sub_Classes WHERE id_classe = 0"
+        query = f"SELECT nome_subclasse FROM Sub_Classes WHERE id_classe = 0"
 
         cursor.execute(query)
         Sub_classes = cursor.fetchall()
@@ -123,10 +124,9 @@ def id_classe(classe):
     if conn:
         cursor = conn.cursor()
 
-        # FIXED: SQL Injection
-        query = "SELECT id_classe FROM Classes WHERE nome_classe = %s"
+        query = f"SELECT id_classe FROM Classes WHERE nome_classe = '{classe}'"
 
-        cursor.execute(query, (classe,))
+        cursor.execute(query)
         id_classe = cursor.fetchall()
         id_formatado = str(id_classe).replace('(','').replace(')','').replace("'","").replace(',','').replace("[","").replace("]","")
 
@@ -140,10 +140,9 @@ def id_raca(raca):
     if conn:
         cursor = conn.cursor()
 
-        # FIXED: SQL Injection
-        query = "SELECT id_raca FROM Racas WHERE nome_raca = %s"
+        query = f"SELECT id_raca FROM Racas WHERE nome_raca = '{raca}'"
 
-        cursor.execute(query, (raca,))
+        cursor.execute(query)
         id_classe = cursor.fetchall()
         id_formatado = str(id_classe).replace('(','').replace(')','').replace("'","").replace(',','').replace("[","").replace("]","")
 
