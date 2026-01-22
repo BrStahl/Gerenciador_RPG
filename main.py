@@ -22,7 +22,7 @@ class TooltipRPG:
         self.tip_window = tw = tk.Toplevel(self.tree)
         tw.wm_overrideredirect(True) # Remove bordas da janela
         tw.wm_geometry(f"+{x+15}+{y+10}")
-        tk.Label(tw, text=texto, background="#ffffe0", relief='solid', borderwidth=1, 
+        tk.Label(tw, text=texto, background="#ffffe0", relief='solid', borderwidth=1,
                  justify='left', font=("Arial", 9)).pack()
 
     def esconder(self):
@@ -34,7 +34,7 @@ class TooltipRPG:
 
 
 
-# Cria os Slots do Personagem 
+# Cria os Slots do Personagem
 def atribuir_slots_por_nivel(id_p, nivel_p, cursor):
     PROGRESSAO_FULLCASTER = {
         1: [2],           # 2 slots de 1º nível
@@ -45,11 +45,11 @@ def atribuir_slots_por_nivel(id_p, nivel_p, cursor):
     }
     """Insere os slots iniciais baseados no nível"""
     slots = PROGRESSAO_FULLCASTER.get(nivel_p, [0])
-    
+
     for i, qtd_max in enumerate(slots):
         nivel_magia = i + 1
         sql = """INSERT INTO Espacos_Magia (id_personagem, nivel_magia, slots_max, slots_atuais)
-                 VALUES (%s, %s, %s, %s) 
+                 VALUES (%s, %s, %s, %s)
                  ON DUPLICATE KEY UPDATE slots_max=%s, slots_atuais=%s"""
         cursor.execute(sql, (id_p, nivel_magia, qtd_max, qtd_max, qtd_max, qtd_max))
 
@@ -62,7 +62,7 @@ def limpa_campos():
     combo_classe.set("")
     combo_Sub_classe.set("")
     combo_alinhamentos.set("")
-    
+
     pts_For.set(8)
     pts_Dex.set(8)
     pts_Con.set(8)
@@ -83,7 +83,7 @@ def altera_pontos(atri,qtd):
 
         if qtd_pontos.get() == 0:
             messagebox.showinfo("Aviso","Todos os pontos distribuidos!")
-            
+
     elif qtd < 0 and qtd_atu_atri > 0 and qtd_atu_atri > 8:
         atri.set(qtd_atu_atri - 1)
         qtd_pontos.set(pts_restantes + 1)
@@ -93,8 +93,8 @@ def busca_invetario(id_raca):
     conn = db.conexao()
     cursor = conn.cursor()
 
-    query = f"SELECT nome_item,quantidade FROM Itens_Iniciais WHERE id_raca = '{id_raca}'"
-    cursor.execute(query)
+    query = "SELECT nome_item,quantidade FROM Itens_Iniciais WHERE id_raca = %s"
+    cursor.execute(query, (id_raca,))
     itens = cursor.fetchall()
 
     inventario_Inicial = []
@@ -104,7 +104,7 @@ def busca_invetario(id_raca):
             inventario_Inicial.append(f" • {i[0]} ({i[1]})")
         else:
             inventario_Inicial.append(f" • {i[0]}")
-    
+
     return "\n".join(inventario_Inicial)
 
 # Salvar Personagem
@@ -123,8 +123,8 @@ def salvar_personagem():
     conn = db.conexao()
     cursor = conn.cursor()
 
-    query = f"SELECT Forca, Inteligencia, Constituicao, Destreza, Sabedoria, Carisma FROM Racas WHERE nome_raca = '{raca}'"
-    cursor.execute(query)
+    query = "SELECT Forca, Inteligencia, Constituicao, Destreza, Sabedoria, Carisma FROM Racas WHERE nome_raca = %s"
+    cursor.execute(query, (raca,))
     bonus = cursor.fetchone()
     Forca = pts_For.get() + bonus[0]
     Inteligencia = pts_Int.get() + bonus[1]
@@ -135,8 +135,8 @@ def salvar_personagem():
     Carga_Max = Forca * 7
     Carga_Atual = 0.00
 
-    query2 = f"SELECT dado_vida FROM Classes WHERE nome_classe = '{classe}'"
-    cursor.execute(query2)
+    query2 = "SELECT dado_vida FROM Classes WHERE nome_classe = %s"
+    cursor.execute(query2, (classe,))
     dado_vida = cursor.fetchone()
     vida_base = dado_vida[0] if dado_vida else 8
     if vida_base == '1d12':
@@ -144,13 +144,13 @@ def salvar_personagem():
         Vida = 12 + Mod_Vida
     elif vida_base == '1d8' or vida_base == 8:
         Mod_Vida = (Constituicao - 10 ) // 2
-        Vida = 8 + Mod_Vida        
+        Vida = 8 + Mod_Vida
     elif vida_base == '1d10':
         Mod_Vida = (Constituicao - 10 ) // 2
         Vida = 10 + Mod_Vida
     elif vida_base == '1d6':
         Mod_Vida = (Constituicao - 10 ) // 2
-        Vida = 6 + Mod_Vida        
+        Vida = 6 + Mod_Vida
 
     # Modificadores
     Mod_Des =  (Destreza - 10 ) // 2
@@ -159,42 +159,26 @@ def salvar_personagem():
     Vida_Atual = Vida_Max
     Defesa = Mod_Des + 10
     Iniciativa = Mod_Des
-   
+
     try:
-        sql = f"""INSERT INTO 
+        sql = """INSERT INTO
                     Personagens (id_personagem,nome,raca,sub_raca,classe,sub_classe,alinhamento,Forca,Inteligencia,Destreza,Constituicao,Carisma,Sabedoria,Vida_Max,Vida_Atual,defesa,Iniciativa,Carga_max,Carga_atual,XP,Lvl,Ouro)
                 VALUES (
-                    '',
-                    '{Nome_per}',
-                    '{raca}',
-                    '{sraca}',
-                    '{classe}',
-                    '{Sub_Classe}',
-                    '{alinhamentos}',
-                    {Forca},
-                    {Inteligencia},
-                    {Destreza},
-                    {Constituicao},
-                    {Carisma},
-                    {Sabedoria},
-                    {Vida_Max},
-                    {Vida_Atual},
-                    {Defesa},
-                    {Iniciativa},
-                    {Carga_Max},
-                    {Carga_Atual},
-                    {XP},
-                    {Lvl},
-                    {Ouro}
+                    '', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
         """
-        cursor.execute(sql)
+        valores = (
+            Nome_per, raca, sraca, classe, Sub_Classe, alinhamentos,
+            Forca, Inteligencia, Destreza, Constituicao, Carisma, Sabedoria,
+            Vida_Max, Vida_Atual, Defesa, Iniciativa, Carga_Max, Carga_Atual, XP, Lvl, Ouro
+        )
+        cursor.execute(sql, valores)
         conn.commit()
 
-                
+
         # CAPTURA O ID GERADO PELO BANCO DE DADOS
         id_novo_personagem = cursor.lastrowid
-                
+
         # ATRIBUI OS SLOTS DE MAGIA USANDO O NOVO ID
         atribuir_slots_por_nivel(id_novo_personagem, Lvl, cursor)
 
@@ -245,38 +229,38 @@ def carregar_inimigos():
 # Atualiza Foto
 def atualizar_foto_personagem(id_personagem):
     caminho_img = filedialog.askopenfilename(filetypes=[("Imagens", "*.png *.jpg *.jpeg")])
-    
+
     if caminho_img:
         with open(caminho_img, 'rb') as arquivo:
             binario_puro = arquivo.read() # Bytes reais
-            
+
         conn = db.conexao()
         cursor = conn.cursor()
-        
+
         # %s SEM ASPAS. O driver do MySQL cuida da conversão binária
         sql = "UPDATE Personagens SET foto_personagem = %s WHERE id_personagem = %s"
-        
+
         # Os valores devem ser passados como o segundo argumento do execute
-        cursor.execute(sql, (binario_puro, id_personagem)) 
-        
+        cursor.execute(sql, (binario_puro, id_personagem))
+
         conn.commit()
         conn.close()
         messagebox.showinfo("Sucesso", "Foto salva corretamente!")
 
 # Exibe Ficha do Personagem
 def mostrar_ficha(id_personagem):
-    
+
     def ajustar_janela_ao_conteudo(event):
         # Obtém o widget da aba selecionada atualmente
         aba_selecionada = event.widget.nametowidget(event.widget.select())
-        
+
         # Força a atualização dos widgets internos para calcular o tamanho real
         aba_selecionada.update_idletasks()
-        
+
         # Pega a largura e altura necessária para essa aba específica
         largura = aba_selecionada.winfo_reqwidth() + 20 # +20 de margem de segurança
         altura = aba_selecionada.winfo_reqheight() + 50 # +50 para compensar o cabeçalho das abas
-        
+
         # Aplica o novo tamanho à janela principal (root)
         # Substitua 'root' pelo nome da sua variável da janela principal se for diferente
         ficha.geometry(f"{largura}x{altura}")
@@ -284,7 +268,7 @@ def mostrar_ficha(id_personagem):
     conn = db.conexao()
     cursor = conn.cursor(dictionary=True)
 
-    query = f'''SELECT 
+    query = '''SELECT
                     id_personagem,
                     P.nome,
                     P.raca,
@@ -307,7 +291,7 @@ def mostrar_ficha(id_personagem):
                     P.defesa,
                     CASE
                         WHEN P.Iniciativa <= 0 THEN 0
-                        ELSE P.Iniciativa 
+                        ELSE P.Iniciativa
                     END AS Iniciativa,
                     P.Carga_max,
                     P.Carga_atual,
@@ -318,10 +302,10 @@ def mostrar_ficha(id_personagem):
                 FROM Personagens P
                 JOIN racas R
                     ON R.nome_raca = P.raca
-                WHERE id_personagem = {id_personagem}   
+                WHERE id_personagem = %s
             '''
-    
-    cursor.execute(query)
+
+    cursor.execute(query, (id_personagem,))
     p = cursor.fetchone()
 
 
@@ -389,14 +373,14 @@ def mostrar_ficha(id_personagem):
             if isinstance(dados, str) and dados.startswith("b'"):
                 import ast
                 dados = ast.literal_eval(dados)
-            
+
             fluxo_dados = io.BytesIO(dados)
             img_pil = Image.open(fluxo_dados)
             img_pil.thumbnail((220, 260)) # Aumentei um pouco para aproveitar o novo LabelFrame
             foto_tk = ImageTk.PhotoImage(img_pil)
-            
+
             lbl_foto = tk.Label(f_foto_lb, image=foto_tk)
-            lbl_foto.image = foto_tk 
+            lbl_foto.image = foto_tk
             lbl_foto.pack(padx=5, pady=5)
         except Exception as e:
             tk.Label(f_foto_lb, text="[ Erro na Imagem ]").pack()
@@ -422,20 +406,20 @@ def mostrar_ficha(id_personagem):
 
         conn = db.conexao()
         cursor = conn.cursor(dictionary=True)
-        
+
         # Verifica slots
         cursor.execute("SELECT slots_atuais FROM Espacos_Magia WHERE id_personagem = %s AND nivel_magia = %s", (id_p, nivel))
         res = cursor.fetchone()
 
         if res and res['slots_atuais'] > 0:
             novo_valor = res['slots_atuais'] - 1
-            cursor.execute("UPDATE Espacos_Magia SET slots_atuais = %s WHERE id_personagem = %s AND nivel_magia = %s", 
+            cursor.execute("UPDATE Espacos_Magia SET slots_atuais = %s WHERE id_personagem = %s AND nivel_magia = %s",
                         (novo_valor, id_p, nivel))
             conn.commit()
             messagebox.showinfo("Sucesso", f"{nome} conjurado! Restam {novo_valor} slots de Lvl {nivel}.")
         else:
             messagebox.showwarning("Esgotado", f"Sem slots de nível {nivel}!")
-        
+
         conn.close()
 
     def atualizar_painel_top3(id_p):
@@ -446,10 +430,10 @@ def mostrar_ficha(id_personagem):
 
         conn = db.conexao()
         cursor = conn.cursor(dictionary=True)
-        
+
         # Busca as 3 magias de menor nível (mais usadas no dia a dia)
         query = """
-            SELECT m.id_magia, m.nome_magia, m.nivel 
+            SELECT m.id_magia, m.nome_magia, m.nivel
             FROM magias m
             JOIN magias_conhecidas mc ON m.id_magia = mc.id_magia
             WHERE mc.id_personagem = %s
@@ -457,7 +441,7 @@ def mostrar_ficha(id_personagem):
         """
         cursor.execute(query, (id_p,))
         lista_magias = cursor.fetchall()
-        
+
         if not lista_magias:
             tk.Label(frame_magias_rapidas, text="Grimório vazio.", fg="gray").grid(row=0, column=0)
         else:
@@ -465,13 +449,13 @@ def mostrar_ficha(id_personagem):
                 # Nome da Magia
                 lbl = tk.Label(frame_magias_rapidas, text=f"{magia['nome_magia']} (Lvl {magia['nivel']})", font=("Arial", 9))
                 lbl.grid(row=i, column=0, sticky="w", pady=2)
-                
+
                 # Botão de Conjuração Rápida
                 btn = tk.Button(
-                    frame_magias_rapidas, 
-                    text="⚡", 
-                    bg="#007bff", 
-                    fg="white", 
+                    frame_magias_rapidas,
+                    text="⚡",
+                    bg="#007bff",
+                    fg="white",
                     width=3,
                     command=lambda m=magia: conjurar_pelo_top3(id_p, m)
                 )
@@ -506,8 +490,8 @@ def mostrar_ficha(id_personagem):
     f_desc = tk.LabelFrame(frame_acoes,text="Caracteristicas da Raça",font=("Arial",7,"bold"))
     f_desc.grid(row=0,column=0,padx=2,pady=2,sticky="nsew")
 
-    descri = f"""SELECT racas.descricao FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(descri)
+    descri = "SELECT racas.descricao FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(descri, (id_personagem,))
     descricao = cursor.fetchone()
 
     if descricao and descricao['descricao']:
@@ -522,8 +506,8 @@ def mostrar_ficha(id_personagem):
     f_idade = tk.LabelFrame(frame_acoes,text="Idade",font=("Arial",7,"bold"))
     f_idade.grid(row=0,column=1,padx=2,pady=2,sticky="nsew")
 
-    ida = f"""SELECT racas.Idade FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(ida)
+    ida = "SELECT racas.Idade FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(ida, (id_personagem,))
     idade = cursor.fetchone()
 
     if idade and idade['Idade']:
@@ -532,14 +516,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui idade registradas."
 
     lbl_idade = tk.Label(f_idade, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_idade.grid(row=0,column=0,padx=5, pady=5) 
+    lbl_idade.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Altura "
     f_altura = tk.LabelFrame(frame_acoes,text="Altura",font=("Arial",7,"bold"))
     f_altura.grid(row=1,column=0,padx=2,pady=2,sticky="nsew")
 
-    altura = f"""SELECT racas.Altura FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(altura)
+    altura = "SELECT racas.Altura FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(altura, (id_personagem,))
     Altura = cursor.fetchone()
 
     if Altura and Altura['Altura']:
@@ -548,14 +532,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui altura registradas."
 
     lbl_alt = tk.Label(f_altura, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_alt.grid(row=0,column=0,padx=5, pady=5) 
+    lbl_alt.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Alinhamentos "
     f_alinh = tk.LabelFrame(frame_acoes,text="Alinhamentos",font=("Arial",7,"bold"))
     f_alinh.grid(row=1,column=1,padx=2,pady=2,sticky="nsew")
 
-    ali = f"""SELECT racas.Alinhamentos FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(ali)
+    ali = "SELECT racas.Alinhamentos FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(ali, (id_personagem,))
     alinhamentos = cursor.fetchone()
 
     if alinhamentos and alinhamentos['Alinhamentos']:
@@ -564,14 +548,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Alinhamentos registrados."
 
     lbl_ali = tk.Label(f_alinh, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_ali.grid(row=0,column=0,padx=5, pady=5,sticky="nsew") 
+    lbl_ali.grid(row=0,column=0,padx=5, pady=5,sticky="nsew")
 
     # Frame "Visão"
     f_visao = tk.LabelFrame(frame_acoes,text="Visão",font=("Arial",7,"bold"))
     f_visao.grid(row=2,column=0,padx=2,pady=2,sticky="nsew")
 
-    visao = f"""SELECT racas.Visao FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(visao)
+    visao = "SELECT racas.Visao FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(visao, (id_personagem,))
     Visao = cursor.fetchone()
 
     if Visao and Visao['Visao']:
@@ -580,14 +564,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Visão registradas."
 
     lbl_visao = tk.Label(f_visao, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_visao.grid(row=0,column=0,padx=5, pady=5) 
+    lbl_visao.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Idiomas"
     f_lin = tk.LabelFrame(frame_acoes,text="Idiomas",font=("Arial",7,"bold"))
     f_lin.grid(row=2,column=1,padx=2,pady=2,sticky="nsew")
 
-    idioma = f"""SELECT racas.Linguas FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(idioma)
+    idioma = "SELECT racas.Linguas FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(idioma, (id_personagem,))
     Lingua = cursor.fetchone()
 
     if Lingua and Lingua['Linguas']:
@@ -596,14 +580,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Idiomas registrados."
 
     lbl_linguas = tk.Label(f_lin, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_linguas.grid(row=0,column=0,padx=5, pady=5) 
+    lbl_linguas.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Habilidades"
     f_hab = tk.LabelFrame(frame_acoes,text="Habilidades",font=("Arial",7,"bold"))
     f_hab.grid(row=3,column=0,padx=2,pady=2,sticky="nsew")
 
-    hab = f"""SELECT racas.Habilidades FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(hab)
+    hab = "SELECT racas.Habilidades FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(hab, (id_personagem,))
     Habilidade = cursor.fetchone()
 
     if Habilidade and Habilidade['Habilidades']:
@@ -612,14 +596,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Habilidades registradas."
 
     lbl_hab = tk.Label(f_hab, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_hab.grid(row=0,column=0,padx=5, pady=5) 
+    lbl_hab.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Velocidade"
     f_velo = tk.LabelFrame(frame_acoes,text="Velocidade",font=("Arial",7,"bold"))
     f_velo.grid(row=3,column=1,padx=2,pady=2,sticky="nsew")
 
-    velo = f"""SELECT racas.Velocidade_desc FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(velo)
+    velo = "SELECT racas.Velocidade_desc FROM personagens P JOIN racas ON racas.nome_raca = P.raca WHERE P.id_personagem = %s"
+    cursor.execute(velo, (id_personagem,))
     Velocidade = cursor.fetchone()
 
     if Velocidade and Velocidade['Velocidade_desc']:
@@ -628,7 +612,7 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Idiomas registrados."
 
     lbl_velo = tk.Label(f_velo, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_velo.grid(row=0,column=0,padx=5, pady=5)   
+    lbl_velo.grid(row=0,column=0,padx=5, pady=5)
 
     # ------------------------------------ Dados Da Classe ----------------------------------------------------------
     frame_d_classe = tk.LabelFrame(aba_classe,text="Informações de Classe",font=("Arial",8,"bold"))
@@ -638,8 +622,8 @@ def mostrar_ficha(id_personagem):
     f_armadura = tk.LabelFrame(frame_d_classe,text="Armadura",font=("Arial",7,"bold"))
     f_armadura.grid(row=0,column=0,padx=2,pady=2,sticky="nsew")
 
-    armor = f"""SELECT C.armadura FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(armor)
+    armor = "SELECT C.armadura FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = %s"
+    cursor.execute(armor, (id_personagem,))
     armadura = cursor.fetchone()
 
     if armadura and armadura['armadura']:
@@ -648,14 +632,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Armaduras registradas."
 
     lbl_armor = tk.Label(f_armadura, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_armor.grid(row=0,column=0,padx=5, pady=5)   
+    lbl_armor.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Ferramentas"
     f_ferr = tk.LabelFrame(frame_d_classe,text="Ferramentas",font=("Arial",7,"bold"))
     f_ferr.grid(row=0,column=1,padx=2,pady=2,sticky="nsew")
 
-    ferr = f"""SELECT C.ferramentas FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(ferr)
+    ferr = "SELECT C.ferramentas FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = %s"
+    cursor.execute(ferr, (id_personagem,))
     ferramentas = cursor.fetchone()
 
     if ferramentas and ferramentas['ferramentas']:
@@ -664,14 +648,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Ferramentas registradas."
 
     lbl_ferr = tk.Label(f_ferr, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_ferr.grid(row=1,column=0,padx=5, pady=5)   
+    lbl_ferr.grid(row=1,column=0,padx=5, pady=5)
 
     # Frame "Salvaguardas"
     f_salv = tk.LabelFrame(frame_d_classe,text="Salvaguardas",font=("Arial",7,"bold"))
     f_salv.grid(row=1,column=0,padx=2,pady=2,sticky="nsew")
 
-    salv = f"""SELECT C.salvaguardas FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(salv)
+    salv = "SELECT C.salvaguardas FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = %s"
+    cursor.execute(salv, (id_personagem,))
     salvaguardas = cursor.fetchone()
 
     if salvaguardas and salvaguardas['salvaguardas']:
@@ -680,14 +664,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Salvaguardas registradas."
 
     lbl_salv = tk.Label(f_salv, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_salv.grid(row=1,column=1,padx=5, pady=5)   
+    lbl_salv.grid(row=1,column=1,padx=5, pady=5)
 
     # Frame "Pericias"
     f_peri = tk.LabelFrame(frame_d_classe,text="Pericias",font=("Arial",7,"bold"))
     f_peri.grid(row=1,column=1,padx=2,pady=2,sticky="nsew")
 
-    Per = f"""SELECT C.pericias FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(Per)
+    Per = "SELECT C.pericias FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = %s"
+    cursor.execute(Per, (id_personagem,))
     pericias = cursor.fetchone()
 
     if pericias and pericias['pericias']:
@@ -702,8 +686,8 @@ def mostrar_ficha(id_personagem):
     f_equi = tk.LabelFrame(frame_d_classe,text="Equipamentos",font=("Arial",7,"bold"))
     f_equi.grid(row=2,column=0,padx=2,pady=2,sticky="nsew")
 
-    ini_equip = f"""SELECT C.equipamento_inicial FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(ini_equip)
+    ini_equip = "SELECT C.equipamento_inicial FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = %s"
+    cursor.execute(ini_equip, (id_personagem,))
     equip_ini = cursor.fetchone()
 
     if equip_ini and equip_ini['equipamento_inicial']:
@@ -712,14 +696,14 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Equipamentos registrados."
 
     lbl_equi = tk.Label(f_equi, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_equi.grid(row=0,column=0,padx=5, pady=5) 
+    lbl_equi.grid(row=0,column=0,padx=5, pady=5)
 
     # Frame "Conjuração"
     f_conju = tk.LabelFrame(frame_d_classe,text="Atributos Para Conjuração",font=("Arial",7,"bold"))
     f_conju.grid(row=2,column=1,padx=2,pady=2,sticky="nsew")
 
-    conju = f"""SELECT C.atributo_conjuracao FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = {id_personagem}"""
-    cursor.execute(conju)
+    conju = "SELECT C.atributo_conjuracao FROM personagens P JOIN Classes C ON C.nome_classe = P.classe WHERE P.id_personagem = %s"
+    cursor.execute(conju, (id_personagem,))
     conjuracao = cursor.fetchone()
 
     if conjuracao and conjuracao['atributo_conjuracao']:
@@ -728,7 +712,7 @@ def mostrar_ficha(id_personagem):
         texto_acoes = "Esta raça não possui Conjurações registradas."
 
     lbl_conju = tk.Label(f_conju, text=texto_acoes, wraplength=330, justify="left", anchor="nw")
-    lbl_conju.grid(row=0,column=0,padx=5, pady=5)      
+    lbl_conju.grid(row=0,column=0,padx=5, pady=5)
 
     # ---------------------------Descrição Sub- Classe--------------------------------------
 
@@ -738,14 +722,14 @@ def mostrar_ficha(id_personagem):
     f_subcl = tk.LabelFrame(frame_s_classe,text="Descrição Sub-Classe (Arquetipo)",font=("Arial",7,"bold"))
     f_subcl.grid(row=0,column=0,rowspan=3,padx=2,pady=2,sticky="nsew")
 
-    desc_sub = f"SELECT sub_classe FROM personagens WHERE id_personagem = {id_personagem}"
-    cursor.execute(desc_sub)
+    desc_sub = "SELECT sub_classe FROM personagens WHERE id_personagem = %s"
+    cursor.execute(desc_sub, (id_personagem,))
     id_sclasse = cursor.fetchone()
 
-    id_sub_classe = f"SELECT descricao FROM sub_classes WHERE nome_subclasse = '{id_sclasse['sub_classe']}'"
-    cursor.execute(id_sub_classe)
+    id_sub_classe = "SELECT descricao FROM sub_classes WHERE nome_subclasse = %s"
+    cursor.execute(id_sub_classe, (id_sclasse['sub_classe'],))
     descricao_sclass = cursor.fetchone()
-    
+
     if descricao_sclass and descricao_sclass['descricao']:
         texto_acoes = str(descricao_sclass['descricao']).replace('#','') # Acessa pela chave, não pelo índice 0
     else:
@@ -763,7 +747,7 @@ def mostrar_ficha(id_personagem):
     # Configuração da Treeview (Colunas)
     colunas = ("Item", "Qtd", "Peso Uni", "Peso Total", "Tipo","Equipado","Slot")
     tabela = ttk.Treeview(frame_lista, columns=colunas, show="headings")
-    
+
     tabela.heading("Item", text="Item")
     tabela.heading("Qtd", text="Qtd")
     tabela.heading("Peso Uni", text="Peso (Un)")
@@ -779,7 +763,7 @@ def mostrar_ficha(id_personagem):
     tabela.column("Peso Total", width=40, anchor="center")
     tabela.column("Tipo", width=40, anchor="center")
     tabela.column("Equipado", width=40, anchor="center")
-    tabela.column("Slot", width=80, anchor="center")  
+    tabela.column("Slot", width=80, anchor="center")
     tabela.pack(side="left", fill="both", expand=True)
 
     # Barra de Rolagem
@@ -800,21 +784,21 @@ def mostrar_ficha(id_personagem):
     def ao_clicar_tabela(event):
         item_id = tabela.identify_row(event.y)
         coluna = tabela.identify_column(event.x)
-        
+
         if not item_id: return
 
         # Coluna #6 é "Equipamento" (Checkbox)
         if coluna == "#6":
             valores = list(tabela.item(item_id, 'values'))
-            
+
             # Índice 5 na lista 'values'
-            if valores[5] == "☐": 
+            if valores[5] == "☐":
                 valores[5] = "☑"
                 valores[6] = "Mão Direita" # Define apenas o padrão inicial
             else:
                 valores[5] = "☐"
                 valores[6] = "" # Limpa o slot se desequipar
-                
+
             tabela.item(item_id, values=valores)
             # DICA: Aqui você deve chamar o UPDATE no Banco de Dados para 'equipado = 1'
 
@@ -822,7 +806,7 @@ def mostrar_ficha(id_personagem):
     def abrir_seletor_slot(event, item_id):
         coluna = tabela.identify_column(event.x)
         x, y, largura, altura = tabela.bbox(item_id, coluna)
-        
+
         opcoes = ["Mão Direita", "Mão Esquerda", "Costas", "Cinto", "Cabeça", "Corpo"]
         cb_slot = ttk.Combobox(tabela, values=opcoes, state="readonly")
         cb_slot.place(x=x, y=y, width=largura, height=altura)
@@ -830,12 +814,12 @@ def mostrar_ficha(id_personagem):
 
         def fechar_e_salvar(event):
             if not cb_slot.winfo_exists(): return # PROTEÇÃO CONTRA O ERRO
-            
+
             novo_local = cb_slot.get()
             novos_v = list(tabela.item(item_id, 'values'))
             novos_v[6] = novo_local # Índice 6 é o Slot
             tabela.item(item_id, values=novos_v)
-            
+
             # SALVAR NO SQL
             conn = db.conexao()
             cursor = conn.cursor()
@@ -860,7 +844,7 @@ def mostrar_ficha(id_personagem):
             cursor = conn.cursor(dictionary=True)
             # Busca propriedades e bônus usando o ID do inventário (iid)
             query = """
-                SELECT E.Propriedades, E.Dado_dano, E.Tipo_dano 
+                SELECT E.Propriedades, E.Dado_dano, E.Tipo_dano
                 FROM Inventario_Personagem IP
                 JOIN equipamentos E ON IP.id_equipamento = E.id_equipamento
                 WHERE IP.id_inventario = %s
@@ -884,7 +868,7 @@ def mostrar_ficha(id_personagem):
             conn = db.conexao()
             cursor = conn.cursor()
             if nova_qtd > 0:
-                cursor.execute("UPDATE Inventario_Personagem SET quantidade = %s WHERE id_inventario = %s", 
+                cursor.execute("UPDATE Inventario_Personagem SET quantidade = %s WHERE id_inventario = %s",
                                (nova_qtd, id_inventario))
             else:
                 cursor.execute("DELETE FROM Inventario_Personagem WHERE id_inventario = %s", (id_inventario,))
@@ -898,7 +882,7 @@ def mostrar_ficha(id_personagem):
         item_id = tabela.focus()
         coluna = tabela.identify_column(event.x)
         if not item_id: return
-        
+
         valores = list(tabela.item(item_id, 'values'))
         tipo = valores[4] # Índice 4 é o "Tipo"
 
@@ -927,7 +911,7 @@ def mostrar_ficha(id_personagem):
             valores[5] = "☐"
             valores[6] = ""
             status = 0
-        
+
         tabela.item(item_id, values=valores)
         # Salva no banco de dados
         conn = db.conexao()
@@ -942,7 +926,7 @@ def mostrar_ficha(id_personagem):
     tabela.bind("<Double-1>", lambda e: ao_dar_duplo_clique(e, id_personagem, p['Carga_max']))
     tabela.bind("<Motion>", monitorar_mouse)
     tabela.bind("<Leave>", lambda e: tooltip.esconder())
-    
+
     conn.close()
     # ------------------------------------------- Aba Magias---------------------------------------
 
@@ -950,12 +934,12 @@ def mostrar_ficha(id_personagem):
         """Atualiza a lista de magias que o personagem conhece"""
         for i in tree.get_children():
             tree.delete(i)
-            
+
         conn = db.conexao()
         cursor = conn.cursor(dictionary=True)
-        
+
         query = """
-            SELECT m.id_magia, m.nome_magia, m.nivel, m.escola, 
+            SELECT m.id_magia, m.nome_magia, m.nivel, m.escola,
                 m.tempo_conjuracao, m.alcance, m.dano_cura
             FROM magias m
             JOIN magias_conhecidas mc ON m.id_magia = mc.id_magia
@@ -965,7 +949,7 @@ def mostrar_ficha(id_personagem):
         cursor.execute(query, (id_p,))
         for m in cursor.fetchall():
             tree.insert("", "end", values=(
-                m['id_magia'], m['nome_magia'], m['nivel'], 
+                m['id_magia'], m['nome_magia'], m['nivel'],
                 m['escola'], m['tempo_conjuracao'], m['alcance'], m['dano_cura']
             ))
         conn.close()
@@ -978,25 +962,25 @@ def mostrar_ficha(id_personagem):
 
         conn = db.conexao()
         cursor = conn.cursor()
-        
+
         try:
             # 1. SQL: Reseta Slots (Atual = Max)
             sql_slots = "UPDATE Espacos_Magia SET slots_atuais = slots_max WHERE id_personagem = %s"
             cursor.execute(sql_slots, (id_p,))
-            
+
             # 2. SQL: Reseta HP (Atual = Max)
             sql_hp = "UPDATE Personagens SET Vida_Atual = Vida_Max WHERE id_personagem = %s"
             cursor.execute(sql_hp, (id_p,))
-            
+
             conn.commit()
-            
+
             # 3. Atualização da Interface
             carregar_magias_personagem(id_p, tree_magias)
-            
+
             messagebox.showinfo("Descanso", "O herói descansou! Recursos totalmente restaurados.")
-            
+
             # DICA: Se você tiver uma função que atualiza a barra de vida na tela principal, chame-a aqui.
-            
+
         except Exception as e:
             conn.rollback()
             messagebox.showerror("Erro", f"Falha ao processar descanso: {e}")
@@ -1009,7 +993,7 @@ def mostrar_ficha(id_personagem):
         if not selecionado:
             messagebox.showwarning("Aviso", "Selecione uma magia!")
             return
-            
+
         valores = tree.item(selecionado)['values']
         nivel_m = int(valores[2])
         nome_m = valores[1]
@@ -1020,7 +1004,7 @@ def mostrar_ficha(id_personagem):
 
         conn = db.conexao()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT slots_atuais FROM Espacos_Magia WHERE id_personagem = %s AND nivel_magia = %s", 
+        cursor.execute("SELECT slots_atuais FROM Espacos_Magia WHERE id_personagem = %s AND nivel_magia = %s",
                     (id_p, nivel_m))
         res = cursor.fetchone()
 
@@ -1084,11 +1068,11 @@ def mostrar_ficha(id_personagem):
             finally: c.close()
 
         tk.Button(janela, text="Aprender Selecionada", bg="#28a745", fg="white", command=aprender).grid(row=2, column=0, pady=10)
-        pesquisar() 
+        pesquisar()
 
     # Configurações de peso para expansão
     aba_magias.columnconfigure(0, weight=1)
-    aba_magias.rowconfigure(1, weight=1) 
+    aba_magias.rowconfigure(1, weight=1)
 
     # Frame Superior (Botões)
     frame_topo = tk.Frame(aba_magias)
@@ -1119,10 +1103,10 @@ def mostrar_ficha(id_personagem):
 
     # 5. NOVO: Botão de Descanso Longo (Linha 3)
     btn_rest = tk.Button(
-        aba_magias, 
-        text="⛺ DESCANSO LONGO (RESTAURAR TUDO)", 
+        aba_magias,
+        text="⛺ DESCANSO LONGO (RESTAURAR TUDO)",
         bg="#28a745", # Verde para indicar recuperação
-        fg="white", 
+        fg="white",
         font=("Arial", 11, "bold"),
         command=lambda: realizar_descanso_longo(id_personagem, tabela_magias)
     )
@@ -1135,21 +1119,21 @@ def mostra_monstro(id_monstro):
     conn = db.conexao()
     cursor = conn.cursor(dictionary=True)
 
-    query = f''' 
-                SELECT 
+    query = '''
+                SELECT
                 nome,
                 nivel_desafio,
                 tipo,
                 hp_max,
                 CASE
                     WHEN (forca- 10) / 2  <= 0 or forca  IS NULL THEN 0.00
-                    ELSE (forca- 10) / 2 
+                    ELSE (forca- 10) / 2
                 END AS forca,
                 CASE
                     WHEN (destreza - 10) / 2 <= 0 or destreza  IS NULL THEN 0.00
-                    ELSE  (destreza - 10) / 2 
+                    ELSE  (destreza - 10) / 2
                 END AS destreza,
-                CASE 
+                CASE
                     WHEN (constituicao - 10) / 2 <= 0 or constituicao  IS NULL THEN 0.00
                     ELSE (constituicao - 10) / 2
                 END  AS constituicao,
@@ -1163,16 +1147,16 @@ def mostra_monstro(id_monstro):
                 END AS carisma,
                 CASE
                     WHEN (sabedoria - 10) / 2 <=0 or sabedoria IS NULL THEN 0.00
-                    ELSE (sabedoria - 10) / 2 
+                    ELSE (sabedoria - 10) / 2
                 END AS sabedoria,
                 ca AS defesa,
-                CASE 
+                CASE
                     WHEN (destreza - 10) / 2 <= 0 or destreza  IS NULL THEN 0.00
                     ELSE (destreza - 10) / 2
                 END AS iniciativa
-            FROM inimigos WHERE id_inimigo = {id_monstro}'''
-    
-    cursor.execute(query)
+            FROM inimigos WHERE id_inimigo = %s'''
+
+    cursor.execute(query, (id_monstro,))
     p = cursor.fetchone()
 
     ficha = tk.Toplevel(janela)
@@ -1199,7 +1183,7 @@ def mostra_monstro(id_monstro):
     barra_hp["maximum"] = p['hp_max']
     barra_hp["value"] = p['hp_max']
     barra_hp.grid(row=3,column=0,sticky='w')
-    
+
     frame_status = tk.Frame(frame_ficha)
     frame_status.grid(row=5,column=0)
 
@@ -1233,15 +1217,15 @@ def obter_contagens_resumo():
     try:
         conn = db.conexao()
         cursor = conn.cursor()
-        
+
         # Conta heróis
         cursor.execute("SELECT COUNT(*) FROM Personagens")
         total_herois = cursor.fetchone()[0]
-        
+
         # Conta monstros (ajuste o nome da tabela se for diferente, ex: 'inimigos')
         cursor.execute("SELECT COUNT(*) FROM inimigos")
         total_monstros = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM equipamentos")
         total_equi = cursor.fetchone()[0]
 
@@ -1274,7 +1258,7 @@ def criar_tela_inicio(aba_inicio):
     canvas.pack(fill="both", expand=True)
     # 1. Localiza a pasta onde o seu main.py está
     diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-    
+
     # 2. Monta o caminho completo para a imagem
     # MUITO IMPORTANTE: Verifique se a extensão é .png ou .webp
     caminho_imagem = os.path.join(diretorio_atual, "fundo_mapa_rpg.png")
@@ -1284,7 +1268,7 @@ def criar_tela_inicio(aba_inicio):
             img_original = Image.open(caminho_imagem)
             img_fundo = img_original.resize((640, 400), Image.LANCZOS)
             img_tk = ImageTk.PhotoImage(img_fundo)
-            
+
             canvas.create_image(0, 0, image=img_tk, anchor="nw")
             canvas.image = img_tk
     except Exception as e:
@@ -1294,7 +1278,7 @@ def criar_tela_inicio(aba_inicio):
 
     # 3. ADICIONAR A CITAÇÃO DO DIA (SOBRE A IMAGEM)
     # Coloca o texto na parte inferior, centralizado
-    canvas.create_text(350, 360, text=citacao_do_dia, 
+    canvas.create_text(350, 360, text=citacao_do_dia,
                        font=("Gabriola", 14, "bold"), # Tente fontes como Gabriola, Constantia ou Cambria
                        fill="#000000", # Cor branca para contraste
                        width=600, justify="center")
@@ -1306,7 +1290,7 @@ def criar_tela_inicio(aba_inicio):
     # Cria um frame para agrupar os cards. Usamos uma cor de fundo semi-transparente
     # (no Tkinter, "semi-transparente" é uma cor sólida que combina com o fundo)
     f_cards_container = tk.Frame(canvas, bg="#4e342e", bd=2, relief="ridge")
-    
+
     # Coloca este frame container "dentro" do canvas, no centro
     canvas.create_window(340, 210, window=f_cards_container, width=240, height=110)
 
@@ -1335,51 +1319,51 @@ def atualizar_inventario_e_peso_ui(id_personagem, tabela_treeview, lbl_peso_stat
     # 1. Limpa a Treeview atual para não duplicar itens
     for i in tabela_treeview.get_children():
         tabela_treeview.delete(i)
-    
+
     conn = db.conexao()
     cursor = conn.cursor(dictionary=True)
-    
+
     # 2. AJUSTE: Buscar também os campos 'equipado' e 'local_equipado'
     query = """
         SELECT IP.id_inventario, E.Nome_equi, IP.quantidade, E.Peso, E.Tipo_equi,
-               IP.equipado, IP.local_equipado 
+               IP.equipado, IP.local_equipado
         FROM Inventario_Personagem IP
         JOIN equipamento E ON IP.id_equipamento = E.id_equipamento
         WHERE IP.id_personagem = %s
     """
     cursor.execute(query, (id_personagem,))
     itens = cursor.fetchall()
-    
+
     peso_total_acumulado = 0.0
-    
+
     # 3. AJUSTE: Inserir todos os 7 valores na Treeview
     for item in itens:
         p_total = item['quantidade'] * item['Peso']
         peso_total_acumulado += p_total
-        
+
         # Converter o status do banco para visual
         simbolo = "☑" if item['equipado'] else "☐"
         slot = item['local_equipado'] if item['local_equipado'] else ""
 
         tabela_treeview.insert("", "end", iid=item['id_inventario'], values=(
-            item['Nome_equi'], 
-            item['quantidade'], 
-            item['Peso'], 
-            p_total, 
+            item['Nome_equi'],
+            item['quantidade'],
+            item['Peso'],
+            p_total,
             item['Tipo_equi'],
             simbolo, # Agora o índice 5 existe!
             slot     # Agora o índice 6 existe!
         ))
-    
+
     # 4. Atualiza o Banco de Dados com o novo peso real
-    cursor.execute("UPDATE Personagens SET Carga_atual = %s WHERE id_personagem = %s", 
+    cursor.execute("UPDATE Personagens SET Carga_atual = %s WHERE id_personagem = %s",
                    (peso_total_acumulado, id_personagem))
     conn.commit()
     conn.close()
-    
+
     # 5. ATUALIZAÇÃO DINÂMICA DA UI
     lbl_peso_status.config(text=f"Pes: {peso_total_acumulado:.1f} / {carga_max}kg")
-    
+
     if peso_total_acumulado > carga_max:
         lbl_peso_status.config(fg="red")
     else:
@@ -1400,11 +1384,11 @@ def abrir_janela_selecao(id_personagem, tabela_inventario_principal, lbl_peso_st
     tk.Label(frame_busca, text="Buscar Item:").pack(side="left", padx=5)
     ent_busca = tk.Entry(frame_busca)
     ent_busca.pack(side="left", fill="x", expand=True, padx=5)
-    
+
     # 3. Lista de Equipamentos (Treeview)
     colunas = ("id", "nome", "tipo", "peso")
     tabela_busca = ttk.Treeview(janela_busca, columns=colunas, show="headings", height=10)
-    
+
     tabela_busca.heading("id", text="ID")
     tabela_busca.heading("nome", text="Nome")
     tabela_busca.heading("tipo", text="Tipo")
@@ -1421,15 +1405,15 @@ def abrir_janela_selecao(id_personagem, tabela_inventario_principal, lbl_peso_st
         # Limpa a lista atual
         for i in tabela_busca.get_children():
             tabela_busca.delete(i)
-        
+
         termo = ent_busca.get()
         conn = db.conexao()
         cursor = conn.cursor(dictionary=True)
-        
+
         # Busca por nome (usando a tabela 'equipamento' que você já possui)
         query = "SELECT id_equipamento, Nome_equi, Tipo_equi, Peso FROM equipamento WHERE Nome_equi LIKE %s"
         cursor.execute(query, (f"%{termo}%",))
-        
+
         for item in cursor.fetchall():
             tabela_busca.insert("", "end", values=(
                 item['id_equipamento'], item['Nome_equi'], item['Tipo_equi'], item['Peso']
@@ -1438,13 +1422,13 @@ def abrir_janela_selecao(id_personagem, tabela_inventario_principal, lbl_peso_st
 
     ent_busca.bind("<KeyRelease>", pesquisar_itens) # Pesquisa enquanto digita
 
-    # Confirma seleção do item 
+    # Confirma seleção do item
     def confirmar_selecao():
         selecionado = tabela_busca.selection()
         if not selecionado:
             messagebox.showwarning("Aviso", "Selecione um item da lista!")
             return
-        
+
         # 1. Pega os dados básicos
         valores = tabela_busca.item(selecionado)['values']
         id_item = valores[0]
@@ -1453,10 +1437,10 @@ def abrir_janela_selecao(id_personagem, tabela_inventario_principal, lbl_peso_st
         # 2. Pergunta a quantidade via pop-up
         # O parâmetro minvalue=1 impede que o usuário digite 0 ou números negativos
         quantidade = simpledialog.askinteger(
-            "Quantidade", 
-            f"Quantas unidades de {nome_item} deseja adicionar?", 
+            "Quantidade",
+            f"Quantas unidades de {nome_item} deseja adicionar?",
             parent=janela_busca,
-            minvalue=1, 
+            minvalue=1,
             initialvalue=1
         )
 
@@ -1466,17 +1450,17 @@ def abrir_janela_selecao(id_personagem, tabela_inventario_principal, lbl_peso_st
 
         conn = db.conexao()
         cursor = conn.cursor()
-        
+
         try:
             # 3. Insere no Banco de Dados com a quantidade escolhida
             sql = "INSERT INTO Inventario_Personagem (id_personagem, id_equipamento, quantidade) VALUES (%s, %s, %s)"
             cursor.execute(sql, (id_personagem, id_item, quantidade))
             conn.commit()
-            
+
             # 4. Atualiza a UI da ficha principal
             atualizar_inventario_e_peso_ui(id_personagem, tabela_inventario_principal, lbl_peso_status, carga_max)
-            
-            janela_busca.destroy() 
+
+            janela_busca.destroy()
             messagebox.showinfo("Sucesso", f"{quantidade}x {nome_item} adicionado ao inventário!")
 
         except Exception as e:
@@ -1485,7 +1469,7 @@ def abrir_janela_selecao(id_personagem, tabela_inventario_principal, lbl_peso_st
             conn.close()
 
     # Botão de Confirmação
-    btn_confirmar = tk.Button(janela_busca, text="Adicionar Selecionado", 
+    btn_confirmar = tk.Button(janela_busca, text="Adicionar Selecionado",
                              bg="#28a745", fg="white", command=confirmar_selecao)
     btn_confirmar.pack(pady=10)
 
@@ -1500,14 +1484,14 @@ def remover_item_selecionado(id_personagem, tabela_treeview, lbl_peso_status, ca
         return
 
     id_inv = item_selecionado[0] # Pega o iid que definimos como id_inventario
-    
+
     if messagebox.askyesno("Confirmar", "Deseja remover este item do inventário?"):
         conn = db.conexao()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM Inventario_Personagem WHERE id_inventario = %s", (id_inv,))
         conn.commit()
         conn.close()
-        
+
         # Chama o refresh para atualizar tudo automaticamente
         atualizar_inventario_e_peso_ui(id_personagem, tabela_treeview, lbl_peso_status, carga_max)
 
@@ -1537,7 +1521,7 @@ criacao = tk.LabelFrame(aba_criacao, text=" Dados de Criação", padx=5, pady=5)
 criacao.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 tk.Label(criacao,text="Dados Basicos",font=("Arial",7,"bold")).grid(row=0,column=0,sticky="w",pady=(5,5))
 
-# Campos de Nome 
+# Campos de Nome
 tk.Label(criacao,text="Nome: ",font = ("Arial",8,"bold")).grid(row = 1, column = 0,sticky= "w")
 Nome = tk.Entry(criacao, width= 65,font=("Arial",7))
 Nome.grid(row = 1, column = 1,columnspan=3,padx=(1,1),pady= (2,2),sticky= "w")
@@ -1560,7 +1544,7 @@ combo_s_racas.grid(row = 2, column = 3,padx=(1,1),pady= (2,2),sticky= "w")
 # Lista Alinhamentos
 tk.Label(criacao,text="Alinhamentos: ",font=("Arial",8,"bold")).grid(row= 3, column=0)
 
-# Combo Alinhamentos 
+# Combo Alinhamentos
 alinhamentos = db.lista_alinhamentos()
 combo_alinhamentos = ttk.Combobox(criacao,values = alinhamentos, state= "readonly", width= 12)
 combo_alinhamentos.grid(row= 3, column= 1,padx=(1,1),pady= (2,2),sticky= "w")
@@ -1646,8 +1630,8 @@ tk.Label(frame_pts,textvariable=pts_Con,font=("Arial",7),width=2).grid(row=6,col
 tk.Button(frame_pts,text="+",command=lambda: altera_pontos(pts_Con,1),width=2,font=("Arial",7)).grid(row=6, column=6)
 
 # Botão para salvar, posicionado abaixo dos atributos
-btn_salvar = tk.Button(aba_criacao, text="Gravar Herói", 
-                       command=lambda: salvar_personagem(), 
+btn_salvar = tk.Button(aba_criacao, text="Gravar Herói",
+                       command=lambda: salvar_personagem(),
                        bg="#4CAF50", fg="white", font=("Arial", 8, "bold"))
 btn_salvar.grid(row=7, column=0, columnspan=7, padx=10, sticky="ew")
 
@@ -1719,8 +1703,8 @@ def raca_selecionada (event):
     raca_escolhida = combo_racas.get()
     id_raca = db.id_raca(raca_escolhida)
 
-    query = f"SELECT nome_subraca FROM Sub_racas WHERE id_raca = {id_raca}"
-    cursor.execute(query)
+    query = "SELECT nome_subraca FROM Sub_racas WHERE id_raca = %s"
+    cursor.execute(query, (id_raca,))
     sracas = cursor.fetchall()
 
     lista_sracas = [sracas[0] for sracas in sracas]
@@ -1738,9 +1722,9 @@ def classe_selecionada(event):
     classe_escolhida = combo_classe.get()
     id = db.id_classe(classe_escolhida)
 
-    query = f"SELECT nome_subclasse FROM Sub_Classes WHERE id_classe = '{id}'"
-    
-    cursor.execute(query)
+    query = "SELECT nome_subclasse FROM Sub_Classes WHERE id_classe = %s"
+
+    cursor.execute(query, (id,))
     sub_classes = cursor.fetchall()
 
     Lista_Sub_classe = [sub[0] for sub in sub_classes]
@@ -1779,7 +1763,7 @@ combo_Sub_classe.bind("<<ComboboxSelected>>",Sub_Classe_selecionada)
 tabela_perso.bind("<Double-1>", on_double_click_perso)
 tabela_inimigo.bind("<Double-1>", on_double_click_best)
 
-# Aba Inicio 
+# Aba Inicio
 criar_tela_inicio(aba_inicio)
 # tk.Label(frame_index, text="Bem-vindo ao Gestor de RPG\nClique em 'Personagem' para começar",justify='center').grid(pady=50)
 
